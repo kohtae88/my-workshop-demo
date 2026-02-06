@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>다마고치 - 한 페이지 게임</title>
+  <style>
+    :root {
+      --bg1: #0f172a;
+      --bg2: #111827;
+      --card: #0b1220;
+      --accent: #f59e0b;
+      --accent2: #22c55e;
+      --danger: #ef4444;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --shadow: rgba(0, 0, 0, 0.35);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 600px at 20% -10%, rgba(34, 197, 94, 0.15), transparent 60%),
+        radial-gradient(900px 500px at 100% 0%, rgba(245, 158, 11, 0.2), transparent 55%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .shell {
+      width: min(960px, 100%);
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(2, 6, 23, 0.95));
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: 0 30px 80px var(--shadow);
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    header h1 {
+      font-size: 26px;
+      margin: 0;
+      letter-spacing: -0.5px;
+    }
+
+    header p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .clock {
+      font-variant-numeric: tabular-nums;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: right;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px;
+    }
+
+    .panel {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      border-radius: 18px;
+      padding: 18px;
+    }
+
+    .pet-stage {
+      display: grid;
+      gap: 16px;
+      align-content: start;
+    }
+
+    .pet {
+      background: radial-gradient(circle at 40% 35%, #fde68a, #f59e0b 70%);
+      width: 180px;
+      height: 180px;
+      border-radius: 40% 40% 50% 50%;
+      margin: 0 auto;
+      position: relative;
+      box-shadow: inset -12px -18px 0 rgba(0, 0, 0, 0.15);
+      transition: transform 0.3s ease;
+    }
+
+    .pet.sleepy { transform: translateY(6px) scale(0.98); filter: saturate(0.7); }
+    .pet.happy { transform: translateY(-4px) scale(1.02); }
+    .pet.sad { transform: translateY(6px) scale(0.98); filter: grayscale(0.2) brightness(0.9); }
+
+    .pet .eye {
+      width: 18px;
+      height: 24px;
+      background: #111827;
+      border-radius: 999px;
+      position: absolute;
+      top: 60px;
+    }
+
+    .pet .eye.left { left: 60px; }
+    .pet .eye.right { right: 60px; }
+
+    .pet .mouth {
+      position: absolute;
+      bottom: 48px;
+      left: 50%;
+      width: 40px;
+      height: 20px;
+      border: 4px solid #111827;
+      border-top: none;
+      border-radius: 0 0 40px 40px;
+      transform: translateX(-50%);
+    }
+
+    .mood {
+      text-align: center;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .stats {
+      display: grid;
+      gap: 12px;
+    }
+
+    .stat {
+      display: grid;
+      gap: 6px;
+    }
+
+    .stat label {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .bar {
+      position: relative;
+      height: 12px;
+      background: rgba(148, 163, 184, 0.16);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar span {
+      position: absolute;
+      inset: 0;
+      width: 50%;
+      background: linear-gradient(90deg, var(--accent), #f97316);
+      border-radius: inherit;
+      transition: width 0.4s ease;
+    }
+
+    .bar.energy span { background: linear-gradient(90deg, #38bdf8, #6366f1); }
+    .bar.fun span { background: linear-gradient(90deg, #34d399, #10b981); }
+    .bar.clean span { background: linear-gradient(90deg, #f472b6, #ec4899); }
+
+    .actions {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    }
+
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 10px;
+      font-weight: 600;
+      color: #0f172a;
+      background: var(--accent);
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+      box-shadow: 0 10px 18px rgba(245, 158, 11, 0.25);
+    }
+
+    button.secondary { background: #38bdf8; }
+    button.ghost { background: transparent; color: var(--text); border: 1px solid rgba(148, 163, 184, 0.4); box-shadow: none; }
+    button:active { transform: translateY(1px) scale(0.98); }
+    button:hover { filter: brightness(1.05); }
+
+    .log {
+      font-size: 13px;
+      color: var(--muted);
+      min-height: 120px;
+      display: grid;
+      gap: 8px;
+      align-content: start;
+    }
+
+    .log span {
+      display: block;
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 10px;
+      padding: 8px 10px;
+      border: 1px solid rgba(148, 163, 184, 0.15);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.2);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .egg {
+      display: none;
+      margin-top: 10px;
+      font-size: 12px;
+      color: #fef3c7;
+    }
+
+    .egg.show { display: block; }
+
+    .footer {
+      margin-top: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .secret-overlay {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: rgba(2, 6, 23, 0.8);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      z-index: 50;
+    }
+
+    .secret-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .secret-card {
+      background: #111827;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 360px;
+      text-align: center;
+      box-shadow: 0 20px 50px var(--shadow);
+    }
+
+    .secret-card h2 { margin: 0 0 10px; }
+    .secret-card p { margin: 0 0 14px; color: var(--muted); }
+
+    .shake {
+      animation: shake 0.4s ease;
+    }
+
+    @keyframes shake {
+      0% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      50% { transform: translateX(6px); }
+      75% { transform: translateX(-4px); }
+      100% { transform: translateX(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div>
+        <h1>우주 알 다마고치</h1>
+        <p>배고픔, 에너지, 즐거움, 청결을 관리해 보세요.</p>
+      </div>
+      <div class="clock" id="clock">--:--</div>
+    </header>
+
+    <div class="grid">
+      <section class="panel pet-stage">
+        <div class="pet" id="pet">
+          <div class="eye left"></div>
+          <div class="eye right"></div>
+          <div class="mouth"></div>
+        </div>
+        <div class="mood" id="mood">느긋함</div>
+        <div class="badge" id="age">나이: 0일</div>
+        <div class="actions">
+          <button id="feed">먹이주기</button>
+          <button id="play" class="secondary">놀아주기</button>
+          <button id="clean">씻기기</button>
+          <button id="sleep" class="ghost">잠자기</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h3>상태</h3>
+        <div class="stats">
+          <div class="stat">
+            <label>배고픔</label>
+            <div class="bar hunger"><span id="hungerBar"></span></div>
+          </div>
+          <div class="stat">
+            <label>에너지</label>
+            <div class="bar energy"><span id="energyBar"></span></div>
+          </div>
+          <div class="stat">
+            <label>즐거움</label>
+            <div class="bar fun"><span id="funBar"></span></div>
+          </div>
+          <div class="stat">
+            <label>청결</label>
+            <div class="bar clean"><span id="cleanBar"></span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h3>일지</h3>
+        <div class="log" id="log"></div>
+        <div class="egg" id="eggHint">힌트: 키보드에 별을 눌러보세요.</div>
+      </section>
+    </div>
+
+    <div class="footer">
+      <span>조작: 버튼 클릭, 더블클릭, 키보드</span>
+      <span id="saveStatus">자동 저장됨</span>
+    </div>
+  </div>
+
+  <div class="secret-overlay" id="secretOverlay">
+    <div class="secret-card">
+      <h2>비밀의 손님 등장</h2>
+      <p>당신의 다마고치가 외계 상인을 만났습니다. 모든 스탯이 회복됩니다.</p>
+      <button id="closeSecret">닫기</button>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      hunger: 55,
+      energy: 55,
+      fun: 55,
+      clean: 55,
+      ageDays: 0,
+      log: [],
+      asleep: false,
+      eggsFound: new Set(),
+      lastAction: Date.now(),
+      secretClicks: 0,
+      cheatBuffer: "",
+    };
+
+    const elements = {
+      pet: document.getElementById("pet"),
+      mood: document.getElementById("mood"),
+      age: document.getElementById("age"),
+      hungerBar: document.getElementById("hungerBar"),
+      energyBar: document.getElementById("energyBar"),
+      funBar: document.getElementById("funBar"),
+      cleanBar: document.getElementById("cleanBar"),
+      log: document.getElementById("log"),
+      eggHint: document.getElementById("eggHint"),
+      saveStatus: document.getElementById("saveStatus"),
+      clock: document.getElementById("clock"),
+      overlay: document.getElementById("secretOverlay"),
+      closeSecret: document.getElementById("closeSecret"),
+    };
+
+    const actions = {
+      feed: document.getElementById("feed"),
+      play: document.getElementById("play"),
+      clean: document.getElementById("clean"),
+      sleep: document.getElementById("sleep"),
+    };
+
+    const clamp = (value) => Math.min(100, Math.max(0, value));
+
+    const addLog = (message) => {
+      state.log.unshift({ message, time: new Date().toLocaleTimeString("ko-KR") });
+      state.log = state.log.slice(0, 6);
+      renderLog();
+    };
+
+    const renderLog = () => {
+      elements.log.innerHTML = "";
+      state.log.forEach((entry) => {
+        const span = document.createElement("span");
+        span.textContent = `${entry.time} · ${entry.message}`;
+        elements.log.appendChild(span);
+      });
+    };
+
+    const renderBars = () => {
+      elements.hungerBar.style.width = `${state.hunger}%`;
+      elements.energyBar.style.width = `${state.energy}%`;
+      elements.funBar.style.width = `${state.fun}%`;
+      elements.cleanBar.style.width = `${state.clean}%`;
+    };
+
+    const updateMood = () => {
+      const avg = (state.hunger + state.energy + state.fun + state.clean) / 4;
+      let mood = "느긋함";
+      let className = "";
+
+      if (state.asleep) {
+        mood = "Zzz... 꿈나라";
+        className = "sleepy";
+      } else if (avg > 75) {
+        mood = "신남";
+        className = "happy";
+      } else if (avg < 35) {
+        mood = "시무룩";
+        className = "sad";
+      } else if (state.hunger < 25) {
+        mood = "배고픔";
+      } else if (state.energy < 25) {
+        mood = "지침";
+      }
+
+      elements.pet.className = `pet ${className}`.trim();
+      elements.mood.textContent = mood;
+    };
+
+    const updateAge = () => {
+      elements.age.textContent = `나이: ${state.ageDays}일`;
+    };
+
+    const saveState = () => {
+      localStorage.setItem("tama-state", JSON.stringify(state));
+      elements.saveStatus.textContent = `자동 저장됨 · ${new Date().toLocaleTimeString("ko-KR")}`;
+    };
+
+    const loadState = () => {
+      const saved = localStorage.getItem("tama-state");
+      if (!saved) return;
+      try {
+        const parsed = JSON.parse(saved);
+        Object.assign(state, parsed, { eggsFound: new Set(parsed.eggsFound || []) });
+      } catch (err) {
+        console.warn(err);
+      }
+    };
+
+    const tick = () => {
+      const now = Date.now();
+      const elapsedMin = (now - state.lastAction) / 60000;
+      if (elapsedMin >= 1) {
+        const decay = Math.min(4, Math.floor(elapsedMin));
+        state.hunger = clamp(state.hunger - decay * 2);
+        state.energy = clamp(state.energy - decay * 2);
+        state.fun = clamp(state.fun - decay * 2);
+        state.clean = clamp(state.clean - decay * 1.5);
+        state.lastAction = now;
+        if (Math.random() < 0.4) addLog("혼자서 별을 세고 있습니다.");
+      }
+
+      if (state.asleep) {
+        state.energy = clamp(state.energy + 0.8);
+        state.hunger = clamp(state.hunger - 0.5);
+      }
+
+      renderBars();
+      updateMood();
+      saveState();
+    };
+
+    const handleAction = (type) => {
+      if (state.asleep && type !== "sleep") {
+        addLog("자는 중이라 먼저 깨워야 해요.");
+        elements.pet.classList.add("shake");
+        setTimeout(() => elements.pet.classList.remove("shake"), 400);
+        return;
+      }
+
+      state.lastAction = Date.now();
+
+      if (type === "feed") {
+        state.hunger = clamp(state.hunger + 18);
+        state.clean = clamp(state.clean - 4);
+        addLog("맛있는 우주 젤리를 먹었습니다.");
+      }
+      if (type === "play") {
+        state.fun = clamp(state.fun + 20);
+        state.energy = clamp(state.energy - 8);
+        addLog("무중력 놀이를 즐겼습니다.");
+      }
+      if (type === "clean") {
+        state.clean = clamp(state.clean + 22);
+        state.fun = clamp(state.fun - 5);
+        addLog("반짝반짝 씻었습니다.");
+      }
+      if (type === "sleep") {
+        state.asleep = !state.asleep;
+        addLog(state.asleep ? "잠들었습니다." : "기상!" );
+      }
+
+      checkEggs(type);
+      renderBars();
+      updateMood();
+      saveState();
+    };
+
+    const checkEggs = (type) => {
+      if (type === "feed" && state.hunger >= 90) unlockEgg("egg-1", "포만감 한계 돌파! 황금젤리 발견.");
+      if (type === "play" && state.fun >= 90) unlockEgg("egg-2", "웃음 폭발! 우주 서커스 입장권 획득.");
+      if (type === "clean" && state.clean >= 90) unlockEgg("egg-3", "청결의 끝! 은하 스파 인증서 획득.");
+      if (state.asleep && state.energy >= 90) unlockEgg("egg-4", "꿈속에서 별지도를 얻었습니다.");
+    };
+
+    const unlockEgg = (id, message) => {
+      if (state.eggsFound.has(id)) return;
+      state.eggsFound.add(id);
+      addLog(`이스터에그: ${message}`);
+      elements.eggHint.classList.add("show");
+    };
+
+    actions.feed.addEventListener("click", () => handleAction("feed"));
+    actions.play.addEventListener("click", () => handleAction("play"));
+    actions.clean.addEventListener("click", () => handleAction("clean"));
+    actions.sleep.addEventListener("click", () => handleAction("sleep"));
+
+    elements.pet.addEventListener("dblclick", () => {
+      state.secretClicks += 1;
+      addLog("두 번 톡톡, 기분이 좋아집니다.");
+      state.fun = clamp(state.fun + 10);
+      if (state.secretClicks >= 5) {
+        state.secretClicks = 0;
+        elements.overlay.classList.add("show");
+        unlockEgg("egg-5", "비밀 손님이 나타났습니다.");
+        state.hunger = 100;
+        state.energy = 100;
+        state.fun = 100;
+        state.clean = 100;
+      }
+      renderBars();
+      updateMood();
+      saveState();
+    });
+
+    elements.closeSecret.addEventListener("click", () => {
+      elements.overlay.classList.remove("show");
+    });
+
+    document.addEventListener("keydown", (event) => {
+      const key = event.key.toLowerCase();
+      state.cheatBuffer = (state.cheatBuffer + key).slice(-8);
+
+      if (key === "*") {
+        unlockEgg("egg-6", "별 키를 눌렀습니다. 우주가 반짝입니다.");
+        document.body.style.background = "radial-gradient(circle at 10% 20%, rgba(251, 191, 36, 0.3), transparent 40%), radial-gradient(circle at 80% 10%, rgba(56, 189, 248, 0.3), transparent 45%), linear-gradient(180deg, #0f172a, #0b1120)";
+      }
+
+      if (state.cheatBuffer.includes("tama")) {
+        unlockEgg("egg-7", "치트코드 활성화! 즐거움과 에너지가 상승합니다.");
+        state.fun = clamp(state.fun + 25);
+        state.energy = clamp(state.energy + 25);
+        renderBars();
+      }
+
+      if (key === "r" && event.shiftKey) {
+        unlockEgg("egg-8", "리셋의 그림자... 하지만 살아남았습니다.");
+        state.hunger = 50;
+        state.energy = 50;
+        state.fun = 50;
+        state.clean = 50;
+        renderBars();
+      }
+
+      updateMood();
+      saveState();
+    });
+
+    const updateClock = () => {
+      const now = new Date();
+      elements.clock.textContent = now.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
+    };
+
+    loadState();
+    addLog("다마고치가 깨어났습니다.");
+    renderBars();
+    updateMood();
+    updateAge();
+    updateClock();
+
+    setInterval(() => {
+      state.ageDays += 1;
+      updateAge();
+    }, 60000);
+
+    setInterval(updateClock, 1000);
+    setInterval(tick, 4000);
+  </script>
+</body>
+</html>
