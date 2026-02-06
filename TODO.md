@@ -8,3 +8,4 @@
 
 ## Notes
 Here are some things I want to remember...
+- [ ] Learn about git remotes
